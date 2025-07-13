@@ -12,14 +12,16 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("Retrieving transport list...");
 
+        final HttpClient client = HttpClient.newHttpClient();
+
         Dotenv dotenv = Dotenv.load();
         String client_id = dotenv.get("CLIENT_ID");
         String client_secret = dotenv.get("CLIENT_SECRET");
-        String authorizationToken = getAuthorizationToken(client_id, client_secret);
+        String authorizationToken = getAuthorizationToken(client_id, client_secret,client);
 
         if (authorizationToken != null && !authorizationToken.isEmpty()) {
             try {
-                retrieveTransportList(authorizationToken);
+                retrieveTransportList(authorizationToken,client);
             } catch (IOException | InterruptedException e) {
                 System.err.println("Error retrieving transport list: " + e.getMessage());
             }
@@ -28,8 +30,7 @@ public class Main {
         }
     }
 
-    private static String getAuthorizationToken(String client_id, String client_secret) {
-        HttpClient client = HttpClient.newHttpClient();
+    private static String getAuthorizationToken(String client_id, String client_secret, HttpClient client) {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://mbn-provider.authentication.eu12.hana.ondemand.com/oauth/token"))
                 .header("Content-Type", "application/x-www-form-urlencoded")
@@ -50,8 +51,7 @@ public class Main {
         return response.body();
     }
 
-    private static void retrieveTransportList(String authorizationToken) throws IOException, InterruptedException {
-        HttpClient client = HttpClient.newHttpClient();
+    private static void retrieveTransportList(String authorizationToken,HttpClient client) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://interview-demo-transport-backend.cfapps.eu12.hana.ondemand.com/transports"))
                 .header("Authorization", "Bearer" + " " + authorizationToken)
