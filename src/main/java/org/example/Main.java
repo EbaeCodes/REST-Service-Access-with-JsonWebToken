@@ -1,17 +1,65 @@
 package org.example;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+import io.github.cdimascio.dotenv.Dotenv;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
 public class Main {
     public static void main(String[] args) {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome!");
+        System.out.println("Retrieving transport list...");
 
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            System.out.println("i = " + i);
+        Dotenv dotenv = Dotenv.load();
+        String client_id = dotenv.get("CLIENT_ID");
+        String client_secret = dotenv.get("CLIENT_SECRET");
+        String authorizationToken = getAuthorizationToken(client_id, client_secret);
+
+        if (authorizationToken != null && !authorizationToken.isEmpty()) {
+            try {
+                retrieveTransportList(authorizationToken);
+            } catch (IOException | InterruptedException e) {
+                System.err.println("Error retrieving transport list: " + e.getMessage());
+            }
+        } else {
+            System.err.println("Failed to retrieve authorization token.");
         }
     }
+
+    private static String getAuthorizationToken(String client_id, String client_secret) {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://mbn-provider.authentication.eu12.hana.ondemand.com/oauth/token"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString("grant_type=client_credentials" +
+                        "response_type=token" + "&client_id="+ client_id + "&client_secret=" +
+                        client_secret + "&scope=interview_demo_transport_app!b923597.transportread"))
+                .build();
+        HttpResponse<String> response = null;
+
+        try {
+            response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+       return response.body();
+    }
+
+    private static void retrieveTransportList(String authorizationToken) throws IOException, InterruptedException {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://interview-demo-transport-backend.cfapps.eu12.hana.ondemand.com/transports"))
+                .header("Authorization", "Bearer" + " " + authorizationToken)
+                .GET()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println(response.body());
+    }
+
 }
