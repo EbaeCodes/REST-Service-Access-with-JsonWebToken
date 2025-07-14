@@ -1,6 +1,7 @@
 package org.example;
 
 import io.github.cdimascio.dotenv.Dotenv;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.URI;
@@ -17,9 +18,12 @@ public class Main {
         Dotenv dotenv = Dotenv.load();
         String client_id = dotenv.get("CLIENT_ID");
         String client_secret = dotenv.get("CLIENT_SECRET");
-        String authorizationToken = getAuthorizationToken(client_id, client_secret,client);
 
-        if (authorizationToken != null && !authorizationToken.isEmpty()) {
+        JSONObject jsonObject = new JSONObject(getAuthorizationToken(client_id, client_secret,client));
+        String authorizationToken = jsonObject.getString("access_token");
+
+
+        if (!authorizationToken.isEmpty()) {
             try {
                 retrieveTransportList(authorizationToken,client);
             } catch (IOException | InterruptedException e) {
@@ -30,12 +34,13 @@ public class Main {
         }
     }
 
+
     private static String getAuthorizationToken(String client_id, String client_secret, HttpClient client) {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://mbn-provider.authentication.eu12.hana.ondemand.com/oauth/token"))
                 .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString("grant_type=client_credentials" +
-                        "response_type=token" + "&client_id="+ client_id + "&client_secret=" +
+                .POST(HttpRequest.BodyPublishers.ofString("&grant_type=client_credentials" +
+                        "&response_type=token" + "&client_id="+ client_id + "&client_secret=" +
                         client_secret + "&scope=interview_demo_transport_app!b923597.transportread"))
                 .build();
         HttpResponse<String> response = null;
@@ -47,14 +52,14 @@ public class Main {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-
+        System.out.println("Authorization response: " + response.body());
         return response.body();
     }
 
     private static void retrieveTransportList(String authorizationToken,HttpClient client) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://interview-demo-transport-backend.cfapps.eu12.hana.ondemand.com/transports"))
-                .header("Authorization", "Bearer" + " " + authorizationToken)
+                .header("Authorization", "Bearer " + authorizationToken)
                 .GET()
                 .build();
 
